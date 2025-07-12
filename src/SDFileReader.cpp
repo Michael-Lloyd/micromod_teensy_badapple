@@ -1,8 +1,6 @@
 #include "SDFileReader.h"
-// TIMING_INSTRUMENTATION: Added for SD card performance analysis
 #include <elapsedMillis.h>
 
-// TIMING_INSTRUMENTATION: Track cumulative stats
 struct SDTimingStats {
     uint32_t totalReads = 0;
     uint32_t totalBytes = 0;
@@ -31,7 +29,6 @@ bool SDFileReader::begin() {
     }
     
     Serial.println("Initializing SD card...");
-    // TIMING_INSTRUMENTATION: Track SD initialization time
     elapsedMicros initTime = 0;
     
     // Ensure CS pin is high before init
@@ -49,7 +46,7 @@ bool SDFileReader::begin() {
         Serial.println("SD card initialization failed!");
         return false;
     }
-    // TIMING_INSTRUMENTATION: Report init time
+    // Report init time
     Serial.print("[TIMING] SD init took: ");
     Serial.print(initTime);
     Serial.println(" us");
@@ -139,7 +136,7 @@ bool SDFileReader::openFile(const char* filename) {
         return false;
     }
     
-    // TIMING_INSTRUMENTATION: Track file open time
+    // Track file open time
     elapsedMicros openTime = 0;
     
     // Close any previously open file
@@ -149,7 +146,7 @@ bool SDFileReader::openFile(const char* filename) {
     
     currentFile = sd.open(filename, O_RDONLY);
     
-    // TIMING_INSTRUMENTATION: Report open time
+    // Report open time
     Serial.print("[TIMING] Opening file '");
     Serial.print(filename);
     Serial.print("' took: ");
@@ -217,7 +214,7 @@ bool SDFileReader::readSequentialInto(uint8_t* buffer, size_t& bytesRead, size_t
         return false;
     }
     
-    // TIMING_INSTRUMENTATION: Track total function time
+    // Track total function time
     elapsedMicros totalTime = 0;
     elapsedMicros seekTime = 0;
     
@@ -226,7 +223,7 @@ bool SDFileReader::readSequentialInto(uint8_t* buffer, size_t& bytesRead, size_t
         Serial.println("Failed to seek to offset");
         return false;
     }
-    // TIMING_INSTRUMENTATION: Report seek time
+    // Report seek time
     unsigned long seekElapsed = seekTime;
     sdStats.totalSeekTime += seekElapsed;
     sdStats.minSeekTime = min(sdStats.minSeekTime, seekElapsed);
@@ -240,12 +237,12 @@ bool SDFileReader::readSequentialInto(uint8_t* buffer, size_t& bytesRead, size_t
     }
     
     // Read data directly into provided buffer
-    // TIMING_INSTRUMENTATION: Track read time
+    // Track read time
     elapsedMicros readTime = 0;
     bytesRead = currentFile.read(buffer, bytesToRead);
     unsigned long readElapsed = readTime;
     
-    // TIMING_INSTRUMENTATION: Update stats
+    // Update stats
     sdStats.totalReads++;
     sdStats.totalBytes += bytesToRead;
     sdStats.totalReadTime += readElapsed;
@@ -274,7 +271,7 @@ bool SDFileReader::readSequentialInto(uint8_t* buffer, size_t& bytesRead, size_t
         return false;
     }
     
-    // TIMING_INSTRUMENTATION: Only report total if it's significantly different from read time
+    // Only report total if it's significantly different from read time
     if ((unsigned long)totalTime > readElapsed + 100) {
         Serial.print("[TIMING] Total readSequentialInto took: ");
         Serial.print((unsigned long)totalTime);
@@ -286,7 +283,7 @@ bool SDFileReader::readSequentialInto(uint8_t* buffer, size_t& bytesRead, size_t
     return true;
 }
 
-// TIMING_INSTRUMENTATION: Function to print timing summary
+// Function to print timing summary
 void SDFileReader::printTimingSummary() {
     if (sdStats.totalReads == 0) return;
     

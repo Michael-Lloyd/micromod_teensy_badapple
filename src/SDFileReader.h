@@ -32,7 +32,7 @@ public:
     uint8_t* readSequential(size_t& bytesRead, size_t bytesToRead, size_t offset);
     bool readSequentialInto(uint8_t* buffer, size_t& bytesRead, size_t bytesToRead, size_t offset);
     
-    // TIMING_INSTRUMENTATION: Print timing summary
+    // Print timing summary
     void printTimingSummary();
 };
 
