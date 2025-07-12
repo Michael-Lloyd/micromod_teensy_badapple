@@ -1,4 +1,4 @@
-This project plays the Bad Apple video on a SparkFun MicroMod display board using a
+This project plays "Bad Apple!!" on a SparkFun MicroMod display board using a
 Teensy MicroMod processor. The video is stored on an SD card in a custom RLE-compressed 
 format and played back at 30 FPS.
 
@@ -49,19 +49,3 @@ The project uses a custom VID0 format with RLE compression optimized for embedde
 - Run-length encoding compression
 - Frame index for fast seeking
 - See `vid/SPECIFICATION.md` for detailed format documentation
-
-## Performance
-
-The video player achieves stable 30 FPS playback with:
-- Segmented frame loading to manage memory
-- Optimized SPI switching between SD card and display
-- Hardware-accelerated display updates
-- Real-time performance metrics via serial output
-
-## Serial Debug Output
-
-Connect to the serial port at 115200 baud to see:
-- Video properties (resolution, FPS, frame count)
-- Playback progress
-- Performance metrics and timing information
-- Any errors during playback
