@@ -6,32 +6,27 @@ uint32_t RLEDecoder::decode(const uint8_t* compressed, uint32_t compressedSize, 
     
     while (inPos < compressedSize && outPos < maxPixels) {
         uint8_t header = compressed[inPos++];
-        uint8_t count = (header & 0x7F) + 1;  // Extract count (bits 6-0) and add 1
+        uint8_t count = (header & 0x7F) + 1;
         
         if (header & 0x80) {
-            // Run: read one RGB565 value and repeat it
-            if (inPos + 1 >= compressedSize) break;  // Bounds check
+            if (inPos + 1 >= compressedSize) break;
             
             uint16_t value = compressed[inPos] | (compressed[inPos + 1] << 8);
             inPos += 2;
             
-            // Ensure we don't overflow output buffer
             uint32_t pixelsToWrite = min((uint32_t)count, maxPixels - outPos);
             for (uint32_t i = 0; i < pixelsToWrite; i++) {
                 output[outPos++] = value;
             }
         } else {
-            // Literal: copy RGB565 values
-            // Ensure we don't overflow output buffer
             uint32_t pixelsToWrite = min((uint32_t)count, maxPixels - outPos);
             
             for (uint32_t i = 0; i < pixelsToWrite; i++) {
-                if (inPos + 1 >= compressedSize) break;  // Bounds check
+                if (inPos + 1 >= compressedSize) break;
                 output[outPos++] = compressed[inPos] | (compressed[inPos + 1] << 8);
                 inPos += 2;
             }
             
-            // Skip any remaining literals if we hit maxPixels
             if (pixelsToWrite < count) {
                 inPos += (count - pixelsToWrite) * 2;
             }
@@ -48,7 +43,6 @@ uint32_t RLEDecoder::decodeSegment(
     uint32_t startPixel, 
     uint32_t pixelCount
 ) {
-    // Find where to start in the compressed data
     uint32_t inPos = findCompressedPosition(compressed, compressedSize, startPixel);
     if (inPos >= compressedSize) return 0;
     
@@ -56,42 +50,35 @@ uint32_t RLEDecoder::decodeSegment(
     uint32_t outPos = 0;
     uint32_t endPixel = startPixel + pixelCount;
     
-    // First, we need to determine our exact position by walking through the data
     uint32_t scanPos = 0;
     while (scanPos < inPos && scanPos < compressedSize) {
         uint8_t header = compressed[scanPos++];
         uint8_t count = (header & 0x7F) + 1;
         
         if (header & 0x80) {
-            // Run
             currentPixel += count;
-            scanPos += 2;  // Skip RGB565 value
+            scanPos += 2;
         } else {
-            // Literal
             currentPixel += count;
-            scanPos += count * 2;  // Skip RGB565 values
+            scanPos += count * 2;
         }
     }
     
-    // Now decode from our position
     while (inPos < compressedSize && outPos < pixelCount) {
         uint8_t header = compressed[inPos];
         uint8_t count = (header & 0x7F) + 1;
         
         if (header & 0x80) {
-            // Run encoding
-            inPos++;  // Move past header
+            inPos++;
             if (inPos + 1 >= compressedSize) break;
             
             uint16_t value = compressed[inPos] | (compressed[inPos + 1] << 8);
             inPos += 2;
             
-            // Determine how many pixels from this run we need
             uint32_t runStart = currentPixel;
             uint32_t runEnd = currentPixel + count;
             
             if (runEnd > startPixel && runStart < endPixel) {
-                // This run overlaps with our segment
                 uint32_t copyStart = max(runStart, startPixel);
                 uint32_t copyEnd = min(runEnd, endPixel);
                 uint32_t copyCount = copyEnd - copyStart;
@@ -103,15 +90,12 @@ uint32_t RLEDecoder::decodeSegment(
             
             currentPixel += count;
         } else {
-            // Literal encoding
-            inPos++;  // Move past header
+            inPos++;
             
-            // Process each literal value
             for (uint8_t i = 0; i < count; i++) {
                 if (inPos + 1 >= compressedSize) break;
                 
                 if (currentPixel >= startPixel && currentPixel < endPixel) {
-                    // This pixel is in our segment
                     output[outPos++] = compressed[inPos] | (compressed[inPos + 1] << 8);
                 }
                 
@@ -139,10 +123,8 @@ uint32_t RLEDecoder::getDecompressedSize(const uint8_t* compressed, uint32_t com
         pixelCount += count;
         
         if (header & 0x80) {
-            // Run: skip RGB565 value
             inPos += 2;
         } else {
-            // Literal: skip RGB565 values
             inPos += count * 2;
         }
     }
@@ -159,18 +141,15 @@ uint32_t RLEDecoder::findCompressedPosition(const uint8_t* compressed, uint32_t 
         uint8_t count = (header & 0x7F) + 1;
         
         if (currentPixel + count > targetPixel) {
-            // Target pixel is within this sequence
             return inPos;
         }
         
-        inPos++;  // Move past header
+        inPos++;
         currentPixel += count;
         
         if (header & 0x80) {
-            // Run: skip RGB565 value
             inPos += 2;
         } else {
-            // Literal: skip RGB565 values
             inPos += count * 2;
         }
     }

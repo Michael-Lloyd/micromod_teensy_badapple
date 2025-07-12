@@ -30,7 +30,6 @@ void VideoPlayer::cleanupBuffers() {
 }
 
 bool VideoPlayer::begin() {
-    // Read header
     size_t headerSize;
     uint8_t* headerData = sdReader->readPartialFile(videoPath, headerSize, sizeof(VideoHeader), 0);
     
@@ -39,27 +38,21 @@ bool VideoPlayer::begin() {
         return false;
     }
     
-    // Copy header data
     memcpy(&header, headerData, sizeof(VideoHeader));
     delete[] headerData;
     
-    // Validate header
     if (memcmp(header.magic, "VID0", 4) != 0) {
         return false;
     }
     
-    // Check compression type
     if (header.compression != 1) {
         return false;
     }
     
-    // Check if index offset looks reasonable
     if (header.indexOffset == 0) {
-        header.indexOffset = 24;  // Default position after header
+        header.indexOffset = 24;
     }
     
-    // Allocate buffers for RLE decompression
-    // 100KB for compressed data buffer
     const uint32_t COMPRESSED_BUFFER_SIZE = 100 * 1024;
     compressedBuffer = new uint8_t[COMPRESSED_BUFFER_SIZE];
     if (!compressedBuffer) {
@@ -67,11 +60,9 @@ bool VideoPlayer::begin() {
         return false;
     }
     
-    // Calculate segment buffer size (100KB worth of pixels)
     const uint32_t SEGMENT_BUFFER_BYTES = 100 * 1024;
-    segmentSize = SEGMENT_BUFFER_BYTES / sizeof(uint16_t);  // Number of pixels
+    segmentSize = SEGMENT_BUFFER_BYTES / sizeof(uint16_t);
     
-    // Calculate rows per segment for display purposes
     rowsPerSegment = segmentSize / header.frameWidth;
     if (rowsPerSegment > header.frameHeight) {
         rowsPerSegment = header.frameHeight;
@@ -79,24 +70,20 @@ bool VideoPlayer::begin() {
     }
     
     
-    // Allocate segment buffer
     segmentBuffer = new uint16_t[segmentSize];
     if (!segmentBuffer) {
         cleanupBuffers();
         return false;
     }
     
-    // Allocate frame index cache
     frameIndexCache = new FrameIndexEntry[INDEX_CACHE_FRAMES];
     if (!frameIndexCache) {
         cleanupBuffers();
         return false;
     }
     
-    // Load first batch of frame indices
     loadIndexCache(0);
     
-    // Open the video file for sequential reading
     if (!sdReader->openFile(videoPath)) {
         cleanupBuffers();
         return false;
@@ -142,7 +129,6 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
         return false;
     }
     
-    // Get frame info from cache or load new cache if needed
     FrameIndexEntry frameEntry;
     if (frameNumber >= indexCacheStart && frameNumber < indexCacheStart + indexCacheSize) {
         frameEntry = frameIndexCache[frameNumber - indexCacheStart];
@@ -153,13 +139,11 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
         frameEntry = frameIndexCache[0];
     }
     
-    // Check if compressed frame fits in our buffer
     const uint32_t COMPRESSED_BUFFER_SIZE = 100 * 1024;
     if (frameEntry.size > COMPRESSED_BUFFER_SIZE) {
         return false;
     }
     
-    // Read entire compressed frame
     size_t readSize;
     bool readSuccess = sdReader->readSequentialInto(
         compressedBuffer, 
@@ -172,21 +156,17 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
         return false;
     }
     
-    // Calculate number of segments needed
     uint32_t totalRows = header.frameHeight;
     uint32_t numSegments = (totalRows + rowsPerSegment - 1) / rowsPerSegment;
     
-    // Process frame in segments
     for (uint32_t segment = 0; segment < numSegments; segment++) {
         uint32_t startRow = segment * rowsPerSegment;
         uint32_t endRow = min(startRow + rowsPerSegment, totalRows);
         uint32_t rowsInSegment = endRow - startRow;
         
-        // Calculate pixel range for this segment
         uint32_t startPixel = startRow * header.frameWidth;
         uint32_t pixelCount = rowsInSegment * header.frameWidth;
         
-        // Decompress segment
         uint32_t decompressedPixels = RLEDecoder::decodeSegment(
             compressedBuffer,
             frameEntry.size,
@@ -199,10 +179,8 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
             return false;
         }
         
-        // Byte swap the segment data in-place
         uint32_t i = 0;
         
-        // Process 8 pixels at a time
         for (; i + 7 < pixelCount; i += 8) {
             segmentBuffer[i]     = __builtin_bswap16(segmentBuffer[i]);
             segmentBuffer[i + 1] = __builtin_bswap16(segmentBuffer[i + 1]);
@@ -214,12 +192,10 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
             segmentBuffer[i + 7] = __builtin_bswap16(segmentBuffer[i + 7]);
         }
         
-        // Handle remaining pixels
         for (; i < pixelCount; i++) {
             segmentBuffer[i] = __builtin_bswap16(segmentBuffer[i]);
         }
         
-        // Draw segment to display
         displayManager->drawFrameBuffer(
             segmentBuffer, 
             header.frameWidth, 

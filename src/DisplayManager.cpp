@@ -20,7 +20,6 @@ void DisplayManager::ensurePinsConfigured() {
     pinMode(pinDC, OUTPUT);
     pinMode(pinBacklight, OUTPUT);
     
-    // Ensure CS is high (deselected) initially
     digitalWrite(pinCS, HIGH);
 }
 
@@ -29,24 +28,18 @@ bool DisplayManager::begin(uint8_t brightness) {
         return true;
     }
     
-    // Configure pins
     ensurePinsConfigured();
     
-    // Initialize SPI if not already done
     SPI.begin();
     
-    // Set backlight brightness
     analogWrite(pinBacklight, brightness);
     
-    // Create display object
     if (!display) {
         display = new LCD320240_4WSPI();
     }
     
-    // Initialize display
     display->begin(pinDC, pinCS, pinBacklight);
     
-    // Clear display to black
     display->clearDisplay();
     
     displayInitialized = true;
@@ -59,23 +52,18 @@ void DisplayManager::end() {
         return;
     }
     
-    // Turn off backlight
     analogWrite(pinBacklight, 0);
     
-    // Ensure CS is high (deselected)
     digitalWrite(pinCS, HIGH);
     
-    // Give time for any pending operations
     delay(10);
     
     displayInitialized = false;
 }
 
 void DisplayManager::releaseSPI() {
-    // Ensure chip select is high
     digitalWrite(pinCS, HIGH);
     
-    // End any active SPI transaction
     SPI.endTransaction();
 }
 
@@ -110,7 +98,6 @@ void DisplayManager::drawImage(uint16_t x, uint16_t y, uint16_t* imageBuffer,
     uint16_t displayWidth = display->xExt;
     uint16_t displayHeight = display->yExt;
     
-    // Draw the image pixel by pixel
     for (uint16_t row = 0; row < imageHeight; row++) {
         for (uint16_t col = 0; col < imageWidth; col++) {
             if ((x + col < displayWidth) && (y + row < displayHeight)) {
@@ -146,8 +133,6 @@ void DisplayManager::drawFrameBuffer(uint16_t* frameBuffer, uint16_t width, uint
         return;
     }
     
-    // Use hwfillFromArray with proper parameters
-    // x0, y0, x1, y1, data pointer, number of pixels, Vh (false for horizontal)
     display->hwfillFromArray(x, y, x + width - 1, y + height - 1, 
                             frameBuffer, width * height, false);
 }

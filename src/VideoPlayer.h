@@ -6,23 +6,21 @@
 #include "DisplayManager.h"
 #include "RLEDecoder.h"
 
-// Video header structure matching the .vid format
 #pragma pack(push, 1)
 struct VideoHeader {
-    char magic[4];          // "VID0"
+    char magic[4];
     uint32_t frameCount;
     uint16_t frameWidth;
     uint16_t frameHeight;
     uint8_t fps;
-    uint8_t compression;    // Compression type: 1=RLE
+    uint8_t compression;
     uint8_t reserved[2];    
-    uint32_t indexOffset;   // Offset to frame index table
+    uint32_t indexOffset;
 };
 
-// Frame index entry structure
 struct FrameIndexEntry {
-    uint32_t offset;        // File offset to frame data
-    uint32_t size;          // Size of compressed frame data
+    uint32_t offset;
+    uint32_t size;
 };
 #pragma pack(pop)
 
@@ -34,17 +32,15 @@ private:
     VideoHeader header;
     bool isValid;
     
-    // Buffers for RLE decompression
-    uint8_t* compressedBuffer;     // Buffer for compressed frame data (100KB)
-    uint16_t* segmentBuffer;       // Buffer for decompressed segment (100KB worth of pixels)
-    uint32_t segmentSize;          // Size of segment buffer in pixels
-    uint32_t rowsPerSegment;       // Number of rows that fit in segment
+    uint8_t* compressedBuffer;
+    uint16_t* segmentBuffer;
+    uint32_t segmentSize;
+    uint32_t rowsPerSegment;
     
-    // Frame index cache (now stores FrameIndexEntry)
     FrameIndexEntry* frameIndexCache;
     uint32_t indexCacheStart;
     uint32_t indexCacheSize;
-    static const uint32_t INDEX_CACHE_FRAMES = 50;  // Reduced since entries are larger
+    static const uint32_t INDEX_CACHE_FRAMES = 50;
     
     bool loadIndexCache(uint32_t startFrame);
     void cleanupBuffers();
@@ -56,10 +52,8 @@ public:
     bool begin();
     void end();
     
-    // Play a single frame in segments
     bool playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t y);
     
-    // Getters
     uint16_t getWidth() const { return header.frameWidth; }
     uint16_t getHeight() const { return header.frameHeight; }
     uint16_t getFPS() const { return header.fps; }
@@ -68,4 +62,4 @@ public:
     uint32_t getSegmentRows() const { return rowsPerSegment; }
 };
 
-#endif // VIDEO_PLAYER_H
+#endif
