@@ -29,9 +29,6 @@ bool DisplayManager::begin(uint8_t brightness) {
         return true;
     }
     
-    Serial.println("\n--- Opening Display Communications ---");
-    Serial.println("Initializing display...");
-    
     // Configure pins
     ensurePinsConfigured();
     
@@ -54,11 +51,6 @@ bool DisplayManager::begin(uint8_t brightness) {
     
     displayInitialized = true;
     
-    Serial.print("Display initialized: ");
-    Serial.print(display->xExt);
-    Serial.print(" x ");
-    Serial.println(display->yExt);
-    
     return true;
 }
 
@@ -66,8 +58,6 @@ void DisplayManager::end() {
     if (!displayInitialized) {
         return;
     }
-    
-    Serial.println("\n--- Closing Display Communications ---");
     
     // Turn off backlight
     analogWrite(pinBacklight, 0);
@@ -79,8 +69,6 @@ void DisplayManager::end() {
     delay(10);
     
     displayInitialized = false;
-    
-    Serial.println("Display shut down.");
 }
 
 void DisplayManager::releaseSPI() {
@@ -107,7 +95,6 @@ uint16_t DisplayManager::getHeight() const {
 
 void DisplayManager::clear() {
     if (!display || !displayInitialized) {
-        Serial.println("Display not initialized!");
         return;
     }
     
@@ -117,11 +104,8 @@ void DisplayManager::clear() {
 void DisplayManager::drawImage(uint16_t x, uint16_t y, uint16_t* imageBuffer, 
                                uint16_t imageWidth, uint16_t imageHeight) {
     if (!display || !displayInitialized || !imageBuffer) {
-        Serial.println("Cannot draw image - display not initialized or no image buffer!");
         return;
     }
-    
-    Serial.println("Drawing image...");
     
     uint16_t displayWidth = display->xExt;
     uint16_t displayHeight = display->yExt;
@@ -134,14 +118,7 @@ void DisplayManager::drawImage(uint16_t x, uint16_t y, uint16_t* imageBuffer,
                 display->pixel(x + col, y + row, &pixel);
             }
         }
-        
-        // Show progress
-        if (row % 20 == 0) {
-            Serial.print(".");
-        }
     }
-    
-    Serial.println(" Complete!");
 }
 
 void DisplayManager::drawPixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -166,7 +143,6 @@ void DisplayManager::drawRectangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16
 void DisplayManager::drawFrameBuffer(uint16_t* frameBuffer, uint16_t width, uint16_t height,
                                     uint16_t x, uint16_t y) {
     if (!display || !displayInitialized || !frameBuffer) {
-        Serial.println("Cannot draw frame - display not initialized or no frame buffer!");
         return;
     }
     

@@ -30,14 +30,11 @@ void VideoPlayer::cleanupBuffers() {
 }
 
 bool VideoPlayer::begin() {
-    Serial.println("VideoPlayer: Opening video file");
-    
     // Read header
     size_t headerSize;
     uint8_t* headerData = sdReader->readPartialFile(videoPath, headerSize, sizeof(VideoHeader), 0);
     
     if (!headerData || headerSize < sizeof(VideoHeader)) {
-        Serial.println("VideoPlayer: Failed to read video header");
         if (headerData) delete[] headerData;
         return false;
     }
@@ -48,24 +45,11 @@ bool VideoPlayer::begin() {
     
     // Validate header
     if (memcmp(header.magic, "VID0", 4) != 0) {
-        Serial.println("VideoPlayer: Invalid video format (not VID0)");
         return false;
     }
     
-    Serial.print("VideoPlayer: Video loaded - ");
-    Serial.print(header.frameWidth);
-    Serial.print("x");
-    Serial.print(header.frameHeight);
-    Serial.print(" @ ");
-    Serial.print(header.fps);
-    Serial.print(" FPS, ");
-    Serial.print(header.frameCount);
-    Serial.println(" frames");
-    
     // Check compression type
     if (header.compression != 1) {
-        Serial.print("VideoPlayer: Unsupported compression type: ");
-        Serial.println(header.compression);
         return false;
     }
     
@@ -79,7 +63,6 @@ bool VideoPlayer::begin() {
     const uint32_t COMPRESSED_BUFFER_SIZE = 100 * 1024;
     compressedBuffer = new uint8_t[COMPRESSED_BUFFER_SIZE];
     if (!compressedBuffer) {
-        Serial.println("VideoPlayer: Failed to allocate compressed buffer");
         cleanupBuffers();
         return false;
     }
@@ -95,22 +78,10 @@ bool VideoPlayer::begin() {
         segmentSize = header.frameWidth * rowsPerSegment;
     }
     
-    Serial.print("Buffer configuration: ");
-    Serial.print(COMPRESSED_BUFFER_SIZE / 1024);
-    Serial.print("KB compressed, ");
-    Serial.print(segmentSize * 2 / 1024);
-    Serial.println("KB decompressed segment");
-    
-    Serial.print("Segment: ");
-    Serial.print(rowsPerSegment);
-    Serial.print(" rows, ");
-    Serial.print(segmentSize);
-    Serial.println(" pixels");
     
     // Allocate segment buffer
     segmentBuffer = new uint16_t[segmentSize];
     if (!segmentBuffer) {
-        Serial.println("VideoPlayer: Failed to allocate segment buffer");
         cleanupBuffers();
         return false;
     }
@@ -118,49 +89,15 @@ bool VideoPlayer::begin() {
     // Allocate frame index cache
     frameIndexCache = new FrameIndexEntry[INDEX_CACHE_FRAMES];
     if (!frameIndexCache) {
-        Serial.println("VideoPlayer: Failed to allocate index cache");
         cleanupBuffers();
         return false;
     }
-    
-    // Report memory usage
-    uint32_t compressedBufferBytes = COMPRESSED_BUFFER_SIZE;
-    uint32_t segmentBufferBytes = segmentSize * sizeof(uint16_t);
-    uint32_t indexCacheBytes = INDEX_CACHE_FRAMES * sizeof(FrameIndexEntry);
-    uint32_t totalBytes = compressedBufferBytes + segmentBufferBytes + indexCacheBytes;
-    
-    Serial.println("\n=== MEMORY USAGE REPORT ===");
-    Serial.print("Compressed buffer: ");
-    Serial.print(compressedBufferBytes);
-    Serial.print(" bytes (");
-    Serial.print(compressedBufferBytes / 1024.0);
-    Serial.println(" KB)");
-    
-    Serial.print("Segment buffer: ");
-    Serial.print(segmentBufferBytes);
-    Serial.print(" bytes (");
-    Serial.print(segmentBufferBytes / 1024.0);
-    Serial.println(" KB)");
-    
-    Serial.print("Index cache: ");
-    Serial.print(indexCacheBytes);
-    Serial.print(" bytes (");
-    Serial.print(indexCacheBytes / 1024.0);
-    Serial.println(" KB)");
-    
-    Serial.print("Total VideoPlayer memory: ");
-    Serial.print(totalBytes);
-    Serial.print(" bytes (");
-    Serial.print(totalBytes / 1024.0);
-    Serial.println(" KB)");
-    Serial.println("===========================\n");
     
     // Load first batch of frame indices
     loadIndexCache(0);
     
     // Open the video file for sequential reading
     if (!sdReader->openFile(videoPath)) {
-        Serial.println("VideoPlayer: Failed to open file for sequential reading");
         cleanupBuffers();
         return false;
     }
@@ -200,7 +137,7 @@ bool VideoPlayer::loadIndexCache(uint32_t startFrame) {
     return true;
 }
 
-bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t y, SegmentMetrics* metrics) {
+bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t y) {
     if (!isValid || frameNumber >= header.frameCount) {
         return false;
     }
@@ -219,16 +156,10 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
     // Check if compressed frame fits in our buffer
     const uint32_t COMPRESSED_BUFFER_SIZE = 100 * 1024;
     if (frameEntry.size > COMPRESSED_BUFFER_SIZE) {
-        Serial.print("Frame ");
-        Serial.print(frameNumber);
-        Serial.print(" compressed size (");
-        Serial.print(frameEntry.size);
-        Serial.println(" bytes) exceeds buffer!");
         return false;
     }
     
     // Read entire compressed frame
-    uint32_t readStart = micros();
     size_t readSize;
     bool readSuccess = sdReader->readSequentialInto(
         compressedBuffer, 
@@ -238,12 +169,7 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
     );
     
     if (!readSuccess || readSize < frameEntry.size) {
-        Serial.println("Failed to read compressed frame data");
         return false;
-    }
-    
-    if (metrics) {
-        metrics->readTime = micros() - readStart;
     }
     
     // Calculate number of segments needed
@@ -261,7 +187,6 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
         uint32_t pixelCount = rowsInSegment * header.frameWidth;
         
         // Decompress segment
-        uint32_t decompressStart = micros();
         uint32_t decompressedPixels = RLEDecoder::decodeSegment(
             compressedBuffer,
             frameEntry.size,
@@ -271,19 +196,10 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
         );
         
         if (decompressedPixels != pixelCount) {
-            Serial.print("Decompression error: expected ");
-            Serial.print(pixelCount);
-            Serial.print(" pixels, got ");
-            Serial.println(decompressedPixels);
             return false;
         }
         
-        if (metrics) {
-            metrics->swapTime += micros() - decompressStart;  // Using swapTime for decompression time
-        }
-        
         // Byte swap the segment data in-place
-        uint32_t swapStart = micros();
         uint32_t i = 0;
         
         // Process 8 pixels at a time
@@ -303,12 +219,7 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
             segmentBuffer[i] = __builtin_bswap16(segmentBuffer[i]);
         }
         
-        if (metrics) {
-            metrics->swapTime += micros() - swapStart;
-        }
-        
         // Draw segment to display
-        uint32_t drawStart = micros();
         displayManager->drawFrameBuffer(
             segmentBuffer, 
             header.frameWidth, 
@@ -316,10 +227,6 @@ bool VideoPlayer::playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t 
             x, 
             y + startRow
         );
-        
-        if (metrics) {
-            metrics->drawTime += micros() - drawStart;
-        }
     }
     
     return true;

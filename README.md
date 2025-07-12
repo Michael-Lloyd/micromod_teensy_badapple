@@ -14,29 +14,19 @@ This project uses PlatformIO with the following libraries:
 
 - **Hyperdisplay** - Base display library
 - **HyperDisplay_4DLCD-320240** - Driver for the 320x240 display (provided in `lib/`)
-- **SdFat** - High-performance SD card library
-
-These dependencies are automatically installed when building with PlatformIO.
-
-## Pin Configuration
-
-The following pins are used (defined in `src/main.cpp`):
-- Display Chip Select: Pin 4
-- Display Data/Command: Pin 5  
-- Display Backlight: Pin 3
-- SD Card Chip Select: Pin 10
+- **SdFat** - SD card library
 
 ## Setup Instructions
 
 1. **Install PlatformIO**
 
-2. **Clone the repository*, and libraries**
+2. **Clone the repository, and libraries**
    - The HyperDisplay library can be found on SparkFun's github page 
    - The specific display library is in `lib/` 
    - SdFat can be found on github (use 2.0.0 or later) 
 
 3. **Prepare the video file**
-   - Convert your Bad Apple video to the custom RLE format using the provided Python script:
+   - Convert your (mp4) video to the custom RLE format using the provided Python script:
    ```bash
    cd vid
    python video_converter.py input_video.mp4 bad_apple_rle.vid

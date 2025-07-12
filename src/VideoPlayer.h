@@ -27,14 +27,6 @@ struct FrameIndexEntry {
 #pragma pack(pop)
 
 class VideoPlayer {
-public:
-    // Timing metrics
-    struct SegmentMetrics {
-        uint32_t readTime;
-        uint32_t swapTime;
-        uint32_t drawTime;
-    };
-    
 private:
     SDFileReader* sdReader;
     DisplayManager* displayManager;
@@ -65,7 +57,7 @@ public:
     void end();
     
     // Play a single frame in segments
-    bool playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t y, SegmentMetrics* metrics = nullptr);
+    bool playFrameSegmented(uint32_t frameNumber, uint16_t x, uint16_t y);
     
     // Getters
     uint16_t getWidth() const { return header.frameWidth; }
