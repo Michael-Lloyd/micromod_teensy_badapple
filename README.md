@@ -5,9 +5,8 @@ format and played back at 30 FPS.
 ## Hardware Requirements
 
 - SparkFun MicroMod Teensy Processor
-- SparkFun MicroMod Input and Display Carrier Board with 4DLCD-320240 display
+- SparkFun MicroMod Input and Display Carrier Board 
 - MicroSD card
-- USB cable for programming
 
 ## Software Dependencies
 
